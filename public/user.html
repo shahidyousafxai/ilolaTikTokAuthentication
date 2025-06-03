@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile - andreplf8ii</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f2f5;
+    }
+
+    .profile-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .profile-picture {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #ccc;
+      margin-right: 20px;
+    }
+
+    .profile-info h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .profile-info p {
+      margin: 5px 0;
+      color: #65676b;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .edit-profile {
+      background-color: #e4e6eb;
+      color: #050505;
+    }
+
+    .promote-post {
+      background-color: #1877f2;
+      color: white;
+    }
+
+    .share-icon {
+      margin-left: auto;
+      font-size: 24px;
+      color: #65676b;
+    }
+
+    .profile-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      font-weight: bold;
+    }
+
+    .bio {
+      margin-bottom: 20px;
+    }
+
+    .content-nav {
+      display: flex;
+      border-bottom: 1px solid #e4e6eb;
+      margin-bottom: 20px;
+    }
+
+    .nav-item {
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      border-bottom: 2px solid #1877f2;
+      color: #1877f2;
+    }
+
+    .content-sort {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .sort-option {
+      margin-left: 10px;
+      padding: 5px 10px;
+      background-color: #e4e6eb;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .sort-option.active {
+      background-color: #1877f2;
+      color: white;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .gallery-item {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    #video-list {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    #video-list div {
+      flex: 0 0 auto;
+      width: 300px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="profile-container">
+    <h2>Tiktok Account Authenticated!</h2>
+  </div>
+  <script>
+
+    let redirectionUrl = "stats";
+
+    function getAllCookies() {
+      const cookies = document.cookie.split('; ').map(cookie => {
+        const [name, value] = cookie.split('=');
+        return [name, decodeURIComponent(value)];
+      });
+      return Object.fromEntries(cookies);
+    }
+
+    document.addEventListener("DOMContentLoaded", async function () {
+      const cookies = getAllCookies();
+      console.log("Coooooooooooooooooooookkkkkkkkkkkkiessssssssssssss", cookies)
+      redirectionUrl = cookies?.redirectionUrl || "stats"
+      return;
+      try {
+        const response = await fetch("/api/user-info");
+        const data = await response.json();
+        if (data.error && data.error.code !== "ok") {
+          console.log("Error: " + data.error.message);
+        } else {
+          const user = data.data.user;
+
+          if (cookies?.userId && cookies?.mediaKitId && cookies?.instaId && cookies?.tkAccessToken && cookies?.tkRefreshToken) {
+            const res = await fetchTikTokData(cookies?.tkAccessToken)
+
+            // await deleteTiktokChannel(cookies?.userId, cookies?.mediaKitId,user,cookies?.instaId,cookies?.tkAccessToken,cookies?.tkRefreshToken,res);
+            await tiktokBackendAPI(cookies?.userId, cookies?.mediaKitId, cookies?.tkAccessToken, cookies?.tkRefreshToken, user?.username, user, cookies?.instaId);
+
+          }
+
+        }
+      } catch (err) {
+        console.log("Error loading user information", err);
+      }
+    });
+
+    async function deleteTiktokChannel(callingUserId, mediaKitId, user, instaId, accessToken, refreshToken, aggregatedData) {
+      const socialChannelName = "Tiktok";
+      const apiUrl = `https://coreapi.ilolas.com/api/MediaKit/DeleteSocialChannelAndData?callingUserId=${callingUserId}&mediaKitId=${mediaKitId}&socialChannelName=${socialChannelName}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete TikTok social channel");
+        }
+
+        const dataForAdd = {
+          mediaKitId: mediaKitId,
+          name: "Tiktok",
+          userName: user?.username,
+          socialLink: "www.tiktok.com/@" + user?.username,
+          followers: user?.follower_count,
+          posts: user?.video_count,
+          likes: aggregatedData?.mostLikedVideo?.like_count,
+          engagementRate: Math.floor(((aggregatedData.totalLikes + aggregatedData.totalComments) / aggregatedData.totalViews) * 100),
+          views: aggregatedData?.mostViewedVideo?.view_count,
+          isToggleOn: true,
+          totalViews: aggregatedData?.totalViews,
+          totalLikes: user?.likes_count,
+          engagement: aggregatedData?.maxEngagementRate
+
+        };
+
+        await addTikTokChannel(dataForAdd, callingUserId, instaId, mediaKitId, accessToken, refreshToken, user?.username);
+      } catch (error) {
+        console.error("Error calling TikTok deletion API:", error);
+      }
+    }
+
+    async function tiktokBackendAPI(callingUserId, mediaKitId, accessToken, refreshToken, tkUserName, user, instaId) {
+      const socialChannelName = "Tiktok";
+
+      const apiUrl = `https://coreapi.ilolas.com/api/Tiktok/AuthenticateTiktok?userId=${callingUserId}&mediaKitId=${mediaKitId}&tiktokUserName=${tkUserName}&accessToken=${accessToken}&refreshToken=${refreshToken}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete TikTok social channel");
+        }
+        const postData = {
+          "mediaKit": {
+            "id": mediaKitId,
+            "instaUserId": instaId,
+            "userId": callingUserId,
+            "isTiktokAuthenticated": true,
+            "isSampleKit": false,
+          }
+        }
+
+        makeTiktokAuthenticate(postData, callingUserId, accessToken, refreshToken, user?.userName)
+      } catch (error) {
+        console.error("Error calling TikTok deletion API:", error);
+      }
+    }
+
+    async function addTikTokChannel(channelData, callingUserId, instaId, mediaKitId, accessToken, refreshToken, userName) {
+      const apiUrl = `https://coreapi.ilolas.com/api/MediaKit/AddSocialChannel?callingUserId=${callingUserId}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(channelData),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to add TikTok social channel");
+        }
+
+        const responseData = await response.json();
+        console.log("TikTok addition API called:", responseData);
+        const postData = {
+          "mediaKit": {
+            "id": mediaKitId,
+            "instaUserId": instaId,
+            "userId": callingUserId,
+            "isTiktokAuthenticated": true,
+            "isSampleKit": false,
+          }
+        }
+        makeTiktokAuthenticate(postData, callingUserId, accessToken, refreshToken, userName)
+
+      } catch (error) {
+        console.error("Error calling TikTok addition API:", error);
+      }
+    }
+
+    async function makeTiktokAuthenticate(channelData, callingUserId, accessToken, refreshToken, userName) {
+      const apiUrl = `https://coreapi.ilolas.com/api/controlpanel/SaveOrUpdateMediaKitDetails?callingUserId=${callingUserId}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(channelData),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to authenticate TikTok social channel");
+        }
+
+        const responseData = await response.json();
+        console.log("TikTok authenticated API called:", responseData);
+        const apiPostData = {
+          userId: callingUserId,
+          userName: userName,
+          accessToken: accessToken,
+          refreshToken: refreshToken
+        }
+        storeAccessToken(apiPostData, callingUserId, accessToken)
+      } catch (error) {
+        console.error("Error calling TikTok addition API:", error);
+      }
+    }
+
+    async function storeAccessToken(channelData, callingUserId, accessToken) {
+      const apiUrl = `https://coreapi.ilolas.com/api/Tiktok/SaveOrUpdateTiktokProfileDetail`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(channelData),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to authenticate TikTok social channel");
+        }
+
+        const responseData = await response.json();
+        console.log("TikTok authenticated API called:", responseData);
+        if (redirectionUrl === "stats") {
+          window.location.href = `https://stats.ilolas.com/media-kit?userId=${callingUserId}`;
+        } else if (redirectionUrl === "vercel") {
+          window.location.href = `https://ilola.vercel.app/media-kit/${callingUserId}`;
+        } else {
+          window.location.href = `https://stats.ilolas.com/media-kit?userId=${callingUserId}`
+        }
+      } catch (error) {
+        console.error("Error calling TikTok addition API:", error);
+      }
+    }
+
+    async function fetchTikTokData(accessToken) {
+      const apiUrl =
+        "https://open.tiktokapis.com/v2/video/list/?fields=like_count,comment_count,view_count,share_count";
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            max_count: 20,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        let videos = data.data.videos;
+
+        let totalLikes = videos.reduce((acc, video) => acc + video.like_count, 0);
+        let totalViews = videos.reduce((acc, video) => acc + video.view_count, 0);
+        let totalComments = videos.reduce(
+          (acc, video) => acc + video.comment_count,
+          0
+        );
+
+        const mostLikedVideo = videos.reduce((max, video) =>
+          video.like_count > max.like_count ? video : max
+        );
+        const mostViewedVideo = videos.reduce((max, video) =>
+          video.view_count > max.view_count ? video : max
+        );
+        const mostCommentedVideo = videos.reduce((max, video) =>
+          video.comment_count > max.comment_count ? video : max
+        );
+
+        let maxEngagementRate = 0;
+        let mostEngagingVideo = null;
+
+        videos.forEach(video => {
+          const { like_count, comment_count, share_count, view_count } = video;
+          const engagementRate = (like_count + comment_count + share_count) / view_count;
+
+          if (engagementRate > maxEngagementRate) {
+            maxEngagementRate = engagementRate;
+            mostEngagingVideo = video;
+          }
+        });
+
+        if (maxEngagementRate > 1) maxEngagementRate = 1;
+        maxEngagementRate = Number(maxEngagementRate) * 100;
+
+        console.log(maxEngagementRate);
+
+        return {
+          totalLikes,
+          totalViews,
+          totalComments,
+          mostLikedVideo,
+          mostCommentedVideo,
+          mostEngagingVideo,
+          mostViewedVideo,
+          maxEngagementRate
+        };
+      } catch (error) {
+        console.error(
+          "Error fetching videos:",
+          error.response ? error.response.data : error.message
+        );
+      }
+    }
+  </script>
+
+</body>
+
+</html>
